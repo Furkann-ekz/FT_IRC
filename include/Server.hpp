@@ -4,8 +4,8 @@
 #include <string>
 #include <vector>
 #include <poll.h>
-#include "../include/Client.hpp"
-#include "../include/Channel.hpp"
+#include "Client.hpp"
+#include "Channel.hpp"
 
 class Server {
 private:
@@ -15,8 +15,7 @@ private:
     std::vector<struct pollfd> _fds;
     std::vector<Client> _clients;
     std::vector<Channel> _channels;
-    void handlePing(Client* client);
-    void checkClientTimeouts();
+    time_t _lastPingTime;
 
 public:
     Server();
@@ -24,7 +23,6 @@ public:
 
     void init(int port, const std::string& password);
     void run();
-    void sendPing(Client* client);
 
 private:
     void acceptNewClient();
@@ -32,6 +30,9 @@ private:
     void handleCommand(Client* client, const std::string& command);
     void removeClient(size_t index);
     Client* getClientByFd(int fd);
+
+    void sendPing(Client* client);
+    void checkClientTimeouts();
 };
 
 #endif

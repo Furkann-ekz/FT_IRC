@@ -12,7 +12,7 @@ private:
     std::string _realname;
     bool _authenticated;
     bool _registered;
-	time_t _lastPingTime;
+    time_t _lastPingTime;
 
 public:
     Client(int fd);
@@ -30,10 +30,8 @@ public:
     void setRealname(const std::string& realname);
     void authenticate();
     void registerUser();
-	void updatePingTime();
+    void updatePingTime();
     time_t getLastPingTime() const;
-	void handlePingResponse(); // PONG mesajı alındığında
-    void sendPing();
 };
 
 #endif

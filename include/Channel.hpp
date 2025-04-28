@@ -3,12 +3,13 @@
 
 #include <string>
 #include <vector>
-#include "../include/Client.hpp"
+#include "Client.hpp"
 
 class Channel {
 private:
     std::string _name;
     std::vector<Client*> _clients;
+    std::vector<Client*> _operators;
 
 public:
     Channel(const std::string& name);
@@ -20,6 +21,10 @@ public:
     bool hasClient(Client* client) const;
     size_t getClientCount() const;
     const std::vector<Client*>& getClients() const;
+
+    void addOperator(Client* client);
+    void removeOperator(Client* client);
+    bool isOperator(Client* client) const;
 };
 
 #endif
