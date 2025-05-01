@@ -1,6 +1,8 @@
 #include "../include/Channel.hpp"
 
-Channel::Channel(const std::string& name) : _name(name) {}
+Channel::Channel(const std::string& name)
+    : _name(name), _inviteOnly(false), _topicRestricted(false), _key(""), _userLimit(-1) {}
+
 Channel::~Channel() {}
 
 const std::string& Channel::getName() const { return _name; }
@@ -33,9 +35,24 @@ bool Channel::hasClient(Client* client) const {
     return false;
 }
 
+void Channel::setInviteOnly(bool value) { _inviteOnly = value; }
+bool Channel::isInviteOnly() const { return _inviteOnly; }
+
+void Channel::setTopicRestricted(bool value) { _topicRestricted = value; }
+bool Channel::isTopicRestricted() const { return _topicRestricted; }
+
+void Channel::setKey(const std::string& key) { _key = key; }
+const std::string& Channel::getKey() const { return _key; }
+
+void Channel::setUserLimit(int limit) { _userLimit = limit; }
+int Channel::getUserLimit() const { return _userLimit; }
+
+
+
 void Channel::addOperator(Client* client) {
-    if (!isOperator(client))
+    if (!isOperator(client)) {
         _operators.push_back(client);
+    }
 }
 
 void Channel::removeOperator(Client* client) {
@@ -47,6 +64,16 @@ void Channel::removeOperator(Client* client) {
     }
 }
 
+
+void Channel::setTopic(const std::string& topic) {
+    _topic = topic;
+}
+
+const std::string& Channel::getTopic() const {
+    return _topic;
+}
+
+
 bool Channel::isOperator(Client* client) const {
     for (size_t i = 0; i < _operators.size(); ++i) {
         if (_operators[i] == client)
@@ -54,3 +81,17 @@ bool Channel::isOperator(Client* client) const {
     }
     return false;
 }
+
+void Channel::inviteClient(Client* client) {
+    if (!isInvited(client))
+        _invited.push_back(client);
+}
+
+bool Channel::isInvited(Client* client) const {
+    for (size_t i = 0; i < _invited.size(); ++i) {
+        if (_invited[i] == client)
+            return true;
+    }
+    return false;
+}
+

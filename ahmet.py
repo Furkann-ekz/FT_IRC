@@ -14,23 +14,8 @@ sock.connect(('127.0.0.1', 6667))
 # Giriş işlemleri
 send(sock, "PASS mypassword")
 send(sock, "NICK ahmet")
-send(sock, "USER ahmet localhost localhost :Ahmet User")
+send(sock, "USER ahmet localhost localhost :Ahmet")
 send(sock, "JOIN #genel")
-
-last_ping_time = time.time()
-
-def send_ping():
-    global last_ping_time
-    current_time = time.time()
-    if current_time - last_ping_time > 60:
-        send(sock, "PING :ping")
-        last_ping_time = current_time
-
-def handle_ping_response(data):
-    global last_ping_time
-    if b"PONG" in data:
-        print("Received PONG from server.")
-        last_ping_time = time.time()
 
 try:
     while True:
@@ -43,14 +28,11 @@ try:
                     print("Server disconnected.")
                     sys.exit()
                 print(data.decode().strip())
-                handle_ping_response(data)
 
             elif s == sys.stdin:
                 user_input = sys.stdin.readline().strip()
                 if user_input:
                     send(sock, user_input)
-
-        send_ping()
 
 except KeyboardInterrupt:
     print("Closing connection...")

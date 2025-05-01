@@ -13,8 +13,8 @@ sock.connect(('127.0.0.1', 6667))
 
 # Giriş işlemleri
 send(sock, "PASS mypassword")
-send(sock, "NICK eren")
-send(sock, "USER eren localhost localhost :Eren")
+send(sock, "NICK furkan")
+send(sock, "USER furkan localhost localhost :Furkan")
 send(sock, "JOIN #genel")
 
 try:

@@ -3,7 +3,7 @@
 
 Client::Client(int fd)
     : _fd(fd), _nickname(""), _username(""), _realname(""),
-      _authenticated(false), _registered(false), _lastPingTime(time(NULL)) {}
+      _authenticated(false), _registered(false) {}
 
 Client::~Client() {}
 
@@ -13,11 +13,21 @@ const std::string& Client::getUsername() const { return _username; }
 const std::string& Client::getRealname() const { return _realname; }
 bool Client::isAuthenticated() const { return _authenticated; }
 bool Client::isRegistered() const { return _registered; }
-time_t Client::getLastPingTime() const { return _lastPingTime; }
 
 void Client::setNickname(const std::string& nickname) { _nickname = nickname; }
 void Client::setUsername(const std::string& username) { _username = username; }
 void Client::setRealname(const std::string& realname) { _realname = realname; }
 void Client::authenticate() { _authenticated = true; }
 void Client::registerUser() { _registered = true; }
-void Client::updatePingTime() { _lastPingTime = time(NULL); }
+
+void Client::appendToBuffer(const std::string& data) {
+    _recvBuffer += data;
+}
+
+std::string& Client::getBuffer() {
+    return _recvBuffer;
+}
+
+void Client::setBuffer(const std::string& buffer) {
+    _recvBuffer = buffer;
+}

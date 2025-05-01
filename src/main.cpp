@@ -1,23 +1,33 @@
 #include "../include/Server.hpp"
 #include <cstdlib>
 #include <iostream>
+#include <csignal>
 
-int main(int argc, char** argv) {
-    if (argc != 3) {
-        std::cerr << "Usage: " << argv[0] << " <port> <password>" << std::endl;
-        return 1;
-    }
+Server* global_server = NULL;
 
-    int port = std::atoi(argv[1]);
-    if (port <= 0 || port > 65535) {
-        std::cerr << "Error: Invalid port number" << std::endl;
-        return 1;
-    }
-
-    std::string password = argv[2];
-    Server server;
-    server.init(port, password);
-    server.run();
-
-    return 0;
+void handleSigInt(int) {
+	if (global_server) {
+		std::cout << "Shutting down cleanly..." << std::endl;
+		global_server->cleanup();
+	}
+	std::exit(0);
 }
+
+int main(int argc, char* argv[]) {
+	if (argc != 3) {
+		std::cerr << "Usage: " << argv[0] << " <port> <password>" << std::endl;
+		return 1;
+	}
+
+	int port = std::atoi(argv[1]);
+	std::string password = argv[2];
+
+	Server server;
+	global_server = &server;
+	std::signal(SIGINT, handleSigInt);
+
+	server.init(port, password);
+	server.run();
+	return 0;
+}
+

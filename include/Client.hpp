@@ -12,7 +12,7 @@ private:
     std::string _realname;
     bool _authenticated;
     bool _registered;
-    time_t _lastPingTime;
+    std::string _recvBuffer;
 
 public:
     Client(int fd);
@@ -30,8 +30,9 @@ public:
     void setRealname(const std::string& realname);
     void authenticate();
     void registerUser();
-    void updatePingTime();
-    time_t getLastPingTime() const;
+    void appendToBuffer(const std::string& data);
+    std::string& getBuffer();
+    void setBuffer(const std::string& buffer);
 };
 
 #endif
