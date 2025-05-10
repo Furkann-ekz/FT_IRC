@@ -1,7 +1,16 @@
 #include "../include/Client.hpp"
 
 Client::Client(int fd)
-    : _fd(fd), _authenticated(false), _registered(false) {}
+    : _fd(fd),
+      _nickname(""),
+      _username(""),
+      _realname(""),
+      _recvBuffer(""),
+      _sendBuffer(""),
+      _authenticated(false),
+      _registered(false)
+{}
+
 
 Client::~Client() {}
 
@@ -55,4 +64,16 @@ std::string& Client::getRecvBuffer() {
 
 std::string& Client::getSendBuffer() {
     return _sendBuffer;
+}
+
+void Client::addUserMode(char mode) {
+    _userModes.insert(mode);
+}
+
+void Client::removeUserMode(char mode) {
+    _userModes.erase(mode);
+}
+
+bool Client::hasUserMode(char mode) const {
+    return _userModes.find(mode) != _userModes.end();
 }

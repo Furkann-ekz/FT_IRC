@@ -84,17 +84,25 @@ void Server::run()
     }
 }
 
-void Server::acceptNewClient() {
+void Server::acceptNewClient()
+{
     sockaddr_in clientAddr;
     socklen_t clientLen = sizeof(clientAddr);
     int clientFd = accept(_listenFd, (sockaddr*)&clientAddr, &clientLen);
-    if (clientFd < 0) {
+    if (clientFd < 0)
+    {
         perror("accept");
         return;
     }
 
     // poll kontrolüyle blocking/non-blocking zaten yapılmış olacak, ayrıca fcntl ile ayar yapmıyoruz (ubuntu kuralı)
-
+    int flags = fcntl(clientFd, F_GETFL, 0);
+    if (flags < 0 || fcntl(clientFd, F_SETFL, flags | O_NONBLOCK) < 0)
+    {
+        perror("fcntl");
+        close(clientFd);
+        return;
+    }
     Client* newClient = new Client(clientFd);
     _clients[clientFd] = newClient;
 
@@ -114,47 +122,59 @@ void Server::handleClientData(int fd)
 
     ssize_t bytesReceived = recv(fd, buffer, sizeof(buffer) - 1, 0);
     if (bytesReceived <= 0)
-	{
+    {
         std::cout << "Client " << fd << " disconnected." << std::endl;
         removeClient(fd);
         return;
     }
 
     buffer[bytesReceived] = '\0';
-    std::cout << "Received from " << fd << ": " << buffer;
 
-	Client* client = _clients[fd];
-	client->getRecvBuffer().append(buffer);
+    Client* client = _clients[fd];
+    client->getRecvBuffer().append(buffer);
 
-	size_t pos;
-	while ((pos = client->getRecvBuffer().find('\n')) != std::string::npos)
-	{
-		std::string line = client->getRecvBuffer().substr(0, pos);
-		client->getRecvBuffer().erase(0, pos + 1);
-	
-		// Eğer satır \r ile bitiyorsa onu da temizle
-		if (!line.empty() && line[line.length() - 1] == '\r')
-			line.erase(line.length() - 1);
-	
-		Commands::execute(client, line);
-	}
+    size_t pos;
+    while ((pos = client->getRecvBuffer().find('\n')) != std::string::npos)
+    {
+        std::string line = client->getRecvBuffer().substr(0, pos);
+        client->getRecvBuffer().erase(0, pos + 1);
 
-    // ileride komut işleme burada yapılacak
+        if (!line.empty() && line[line.length() - 1] == '\r')
+            line.erase(line.length() - 1);
+
+        if (line.empty())
+            continue;
+
+        std::cout << "Received from " << fd << ": [" << line << "]" << std::endl; // ✅ sadece işlenen komut
+
+        Commands::execute(client, line);
+
+        if (_clients.find(fd) == _clients.end())
+            return;
+
+        client = _clients[fd];
+    }
 }
 
-void Server::removeClient(int fd) {
-    close(fd);
-    for (std::vector<pollfd>::iterator it = _pollfds.begin(); it != _pollfds.end(); ++it) {
-        if (it->fd == fd) {
+
+void Server::removeClient(int fd)
+{
+    if (_clients.find(fd) == _clients.end())
+        return;
+
+    close(fd); // kapanmışsa tekrar kapama dert yaratmaz
+
+    for (std::vector<pollfd>::iterator it = _pollfds.begin(); it != _pollfds.end(); ++it)
+    {
+        if (it->fd == fd)
+        {
             _pollfds.erase(it);
             break;
         }
     }
-    std::map<int, Client*>::iterator clientIt = _clients.find(fd);
-    if (clientIt != _clients.end()) {
-        delete clientIt->second;
-        _clients.erase(clientIt);
-    }
+
+    delete _clients[fd];
+    _clients.erase(fd);
 }
 
 std::map<int, Client*>& Server::getClients()

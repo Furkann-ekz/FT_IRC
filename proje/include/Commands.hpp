@@ -25,6 +25,10 @@ class Commands
 			static void handleNick(Client* client, const std::vector<std::string>& tokens);
 			static void handleUser(Client* client, const std::vector<std::string>& tokens);
 			static void handleJoin(Client* client, const std::vector<std::string>& tokens);
+			static void handlePing(Client* client, const std::vector<std::string>& tokens);
+			static void handleMode(Client* client, const std::vector<std::string>& tokens);
+			static void handleKick(Client* client, const std::vector<std::string>& tokens);
+
 };
 
 #endif
