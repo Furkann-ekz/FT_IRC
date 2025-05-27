@@ -29,7 +29,23 @@ const std::set<std::string>& Channel::getOperatorNicks() const
 	return _operatorNicks;
 }
 
-Channel::Channel(const std::string &name) : _name(name), _key(""), _userLimit(-1), _topic(""), _topicRestricted(false), _inviteOnly(false) {}
+Channel::Channel(const std::string &name)
+	: _name(name),
+	  _topic(""),
+	  _key(""),
+	  _userLimit(-1),
+	  _topicRestricted(false),
+	  _inviteOnly(false) {}
+
+Channel::~Channel()
+{
+	_clients.clear();
+	_invitedNicks.clear();
+	_operatorNicks.clear();
+	_topic.clear();
+	_key.clear();
+	_userLimit = -1;
+}
 
 const std::string &Channel::getName() const
 {

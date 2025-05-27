@@ -1,7 +1,7 @@
 #include "../include/Commands.hpp"
 #include "../include/Client.hpp"
 #include "../include/Channel.hpp"
-#include "../include/Server.hpp"  // Gereken tanım burada
+#include "../include/Server.hpp"
 
 #include <iostream>
 #include <sstream>
@@ -24,11 +24,23 @@ void Commands::execute(Client* client, const std::string& input)
 
 	const std::string& command = tokens[0];
 
-	// ✅ Eğer komut bilinmiyorsa, 421 dön
-	const std::set<std::string> knownCommands = {
-		"PASS", "NICK", "USER", "JOIN", "PRIVMSG", "PART", "QUIT", "PING", "MODE",
-		"NAMES", "KICK", "TOPIC", "WHO", "INVITE", "LIST", "NOTICE"
-	};
+	std::set<std::string> knownCommands;
+	knownCommands.insert("PASS");
+	knownCommands.insert("NICK");
+	knownCommands.insert("USER");
+	knownCommands.insert("JOIN");
+	knownCommands.insert("PRIVMSG");
+	knownCommands.insert("PART");
+	knownCommands.insert("QUIT");
+	knownCommands.insert("PING");
+	knownCommands.insert("MODE");
+	knownCommands.insert("NAMES");
+	knownCommands.insert("KICK");
+	knownCommands.insert("TOPIC");
+	knownCommands.insert("WHO");
+	knownCommands.insert("INVITE");
+	knownCommands.insert("LIST");
+	knownCommands.insert("NOTICE");
 
 	if (knownCommands.find(command) == knownCommands.end())
 	{
@@ -39,7 +51,6 @@ void Commands::execute(Client* client, const std::string& input)
 		return;
 	}
 
-	// ✅ Eğer PASS gelmemişse ve bu PASS değilse → 451 hatası
 	if (!client->isAuthenticated() && command != "PASS")
 	{
 		std::string errMsg = ":irc.localhost 451 * :You have not registered\r\n";
@@ -96,9 +107,8 @@ static bool isValidChannelName(const std::string& name)
 
 void Commands::handleList(Client* client, const std::vector<std::string>& tokens)
 {
-	(void)tokens; // parametre gerekmiyor
+	(void)tokens;
 
-	// 321 = RPL_LISTSTART
 	std::string startMsg = ":irc.localhost 321 " + client->getNickname() + " Channel :Users Name\r\n";
 	send(client->getFd(), startMsg.c_str(), startMsg.length(), 0);
 
@@ -112,7 +122,6 @@ void Commands::handleList(Client* client, const std::vector<std::string>& tokens
 		send(client->getFd(), listLine.c_str(), listLine.length(), 0);
 	}
 
-	// 323 = RPL_LISTEND
 	std::string endMsg = ":irc.localhost 323 " + client->getNickname() + " :End of /LIST\r\n";
 	send(client->getFd(), endMsg.c_str(), endMsg.length(), 0);
 }
@@ -233,7 +242,7 @@ void Commands::handleInvite(Client* client, const std::vector<std::string>& toke
 	std::string inviteMsg = ":" + client->getNickname() + " INVITE " + targetNick + " :" + channelName + "\r\n";
 	send(targetClient->getFd(), inviteMsg.c_str(), inviteMsg.length(), 0);
 
-	channel->invite(targetNick); // ← INVITE LISTEYE EKLENSİN**
+	channel->invite(targetNick);
 
 	std::cout << "User " << client->getNickname() << " invited " << targetNick << " to " << channelName << std::endl;
 }
@@ -313,7 +322,6 @@ void Commands::handleNames(Client* client, const std::vector<std::string>& token
 
 	std::string endMsg = ":irc.localhost 366 " + client->getNickname() + " " + channelName + " :End of /NAMES list.\r\n";
 
-	// İki mesajı tek seferde gönder
 	std::string fullMsg = namesReply + endMsg;
 	send(client->getFd(), fullMsg.c_str(), fullMsg.length(), 0);
 }
@@ -358,7 +366,6 @@ void Commands::handleJoin(Client* client, const std::vector<std::string>& tokens
 	{
 		channel = g_channels[channelName];
 
-		// 🔐 Şifre kontrolü
 		if (channel->hasKey() && channel->getKey() != keyGiven)
 		{
 			std::string err = ":irc.localhost 475 " + client->getNickname() + " " + channelName + " :Cannot join channel (+k)\r\n";
@@ -366,7 +373,6 @@ void Commands::handleJoin(Client* client, const std::vector<std::string>& tokens
 			return;
 		}
 
-		// 🔢 Kullanıcı limiti kontrolü
 		if (channel->hasLimit() && channel->getClientCount() >= channel->getLimit())
 		{
 			std::string err = ":irc.localhost 471 " + client->getNickname() + " " + channelName + " :Cannot join channel (+l)\r\n";
@@ -374,7 +380,6 @@ void Commands::handleJoin(Client* client, const std::vector<std::string>& tokens
 			return;
 		}
 
-		// 📛 Invite-only kontrolü
 		if (channel->isInviteOnly() && !channel->isInvited(client->getNickname()))
 		{
 			std::string err = ":irc.localhost 473 " + client->getNickname() + " " + channelName + " :Cannot join channel (+i)\r\n";
@@ -388,17 +393,14 @@ void Commands::handleJoin(Client* client, const std::vector<std::string>& tokens
 		channel->addClient(client);
 		std::cout << "User " << client->getNickname() << " joined channel " << channelName << std::endl;
 
-		// ✅ İlk kullanıcıya operator yetkisi
 		if (channel->getClients().size() == 1)
 			channel->addOperator(client);
 
-		// 🔄 Davetliyse sil
 		channel->removeInvite(client->getNickname());
 
 		std::string joinMsg = getPrefix(client) + " JOIN :" + channelName + "\r\n";
 		channel->broadcast(joinMsg);
 
-		// 📢 Topic gönderimi
 		if (channel->hasTopic())
 		{
 			std::string topicMsg = ":irc.localhost 332 " + client->getNickname() + " " + channelName + " :" + channel->getTopic() + "\r\n";
@@ -410,7 +412,6 @@ void Commands::handleJoin(Client* client, const std::vector<std::string>& tokens
 			send(client->getFd(), noTopic.c_str(), noTopic.length(), 0);
 		}
 
-		// 📋 NAMES + 366
 		std::vector<std::string> fakeTokens;
 		fakeTokens.push_back("NAMES");
 		fakeTokens.push_back(channelName);
@@ -430,17 +431,17 @@ std::vector<std::string> Commands::split(const std::string& input)
 
 void Commands::handlePing(Client* client, const std::vector<std::string>& tokens)
 {
-    if (tokens.size() < 2)
-    {
-        std::cout << "PING: Missing parameter." << std::endl;
-        return;
-    }
+	if (tokens.size() < 2)
+	{
+		std::cout << "PING: Missing parameter." << std::endl;
+		return;
+	}
 
-    std::string token = tokens[1];
-    std::string pongReply = "PONG :" + token + "\r\n";
-    send(client->getFd(), pongReply.c_str(), pongReply.length(), 0);
+	std::string token = tokens[1];
+	std::string pongReply = "PONG :" + token + "\r\n";
+	send(client->getFd(), pongReply.c_str(), pongReply.length(), 0);
 
-    std::cout << "PING received, PONG sent: " << pongReply;
+	std::cout << "PING received, PONG sent: " << pongReply;
 }
 
 void Commands::handlePrivmsg(Client* sender, const std::vector<std::string>& tokens)
@@ -501,37 +502,35 @@ void Commands::handlePrivmsg(Client* sender, const std::vector<std::string>& tok
 
 void Commands::handleQuit(Client* client, const std::vector<std::string>& tokens)
 {
-    std::string reason = "Client Quit";
-    if (tokens.size() > 1)
-        reason = tokens[1];
-    if (!reason.empty() && reason[0] == ':')
-        reason = reason.substr(1);
+	std::string reason = "Client Quit";
+	if (tokens.size() > 1)
+		reason = tokens[1];
+	if (!reason.empty() && reason[0] == ':')
+		reason = reason.substr(1);
 
-    std::string quitMsg = getPrefix(client) + " QUIT :" + reason + "\r\n";
+	std::string quitMsg = getPrefix(client) + " QUIT :" + reason + "\r\n";
 
-    // Tüm kanallardan çıkart
-    for (std::map<std::string, Channel*>::iterator it = g_channels.begin(); it != g_channels.end();)
-    {
-        Channel* channel = it->second;
-        if (channel->hasClient(client))
-        {
-            channel->broadcast(quitMsg);
-            channel->removeOperator(client);
-            channel->removeClient(client);
+	for (std::map<std::string, Channel*>::iterator it = g_channels.begin(); it != g_channels.end();)
+	{
+		Channel* channel = it->second;
+		if (channel->hasClient(client))
+		{
+			channel->broadcast(quitMsg);
+			channel->removeOperator(client);
+			channel->removeClient(client);
 
-            if (channel->getClients().empty())
-            {
-                delete channel;
-                g_channels.erase(it++);
-                continue;
-            }
-        }
-        ++it;
-    }
+			if (channel->getClients().empty())
+			{
+				delete channel;
+				g_channels.erase(it++);
+				continue;
+			}
+		}
+		++it;
+	}
 
-    // Son olarak bağlantıyı kapat
-    int fd = client->getFd();
-    g_server->removeClient(fd);
+	int fd = client->getFd();
+	g_server->removeClient(fd);
 }
 
 
@@ -554,7 +553,7 @@ void Commands::handlePass(Client* client, const std::vector<std::string>& tokens
 		std::string err = ":irc.localhost 464 * :Password incorrect\r\n";
 		send(client->getFd(), err.c_str(), err.length(), 0);
 		client->setAuthenticated(false);
-		return; // Bağlantıyı kesmiyoruz
+		return;
 	}
 	client->setAuthenticated(true);
 	std::cout << "PASS received: " << pass << std::endl;
@@ -562,77 +561,77 @@ void Commands::handlePass(Client* client, const std::vector<std::string>& tokens
 
 void Commands::handleKick(Client* client, const std::vector<std::string>& tokens)
 {
-    if (tokens.size() < 3)
-    {
-        std::string err = "461 " + client->getNickname() + " KICK :Not enough parameters\r\n";
-        send(client->getFd(), err.c_str(), err.length(), 0);
-        return;
-    }
+	if (tokens.size() < 3)
+	{
+		std::string err = "461 " + client->getNickname() + " KICK :Not enough parameters\r\n";
+		send(client->getFd(), err.c_str(), err.length(), 0);
+		return;
+	}
 
-    const std::string& channelName = tokens[1];
-    const std::string& targetNick = tokens[2];
+	const std::string& channelName = tokens[1];
+	const std::string& targetNick = tokens[2];
 
-    if (g_channels.find(channelName) == g_channels.end())
-    {
-        std::string err = "403 " + client->getNickname() + " " + channelName + " :No such channel\r\n";
-        send(client->getFd(), err.c_str(), err.length(), 0);
-        return;
-    }
+	if (g_channels.find(channelName) == g_channels.end())
+	{
+		std::string err = "403 " + client->getNickname() + " " + channelName + " :No such channel\r\n";
+		send(client->getFd(), err.c_str(), err.length(), 0);
+		return;
+	}
 
-    Channel* channel = g_channels[channelName];
+	Channel* channel = g_channels[channelName];
 
-    if (!channel->hasClient(client))
-    {
-        std::string err = "442 " + client->getNickname() + " " + channelName + " :You're not on that channel\r\n";
-        send(client->getFd(), err.c_str(), err.length(), 0);
-        return;
-    }
+	if (!channel->hasClient(client))
+	{
+		std::string err = "442 " + client->getNickname() + " " + channelName + " :You're not on that channel\r\n";
+		send(client->getFd(), err.c_str(), err.length(), 0);
+		return;
+	}
 
-    if (!channel->isOperator(client))
-    {
-        std::string err = "482 " + client->getNickname() + " " + channelName + " :You're not channel operator\r\n";
-        send(client->getFd(), err.c_str(), err.length(), 0);
-        return;
-    }
+	if (!channel->isOperator(client))
+	{
+		std::string err = "482 " + client->getNickname() + " " + channelName + " :You're not channel operator\r\n";
+		send(client->getFd(), err.c_str(), err.length(), 0);
+		return;
+	}
 
-    Client* target = NULL;
-    std::map<int, Client*>& clients = g_server->getClients();
-    for (std::map<int, Client*>::iterator it = clients.begin(); it != clients.end(); ++it)
-    {
-        if (it->second->getNickname() == targetNick)
-        {
-            target = it->second;
-            break;
-        }
-    }
+	Client* target = NULL;
+	std::map<int, Client*>& clients = g_server->getClients();
+	for (std::map<int, Client*>::iterator it = clients.begin(); it != clients.end(); ++it)
+	{
+		if (it->second->getNickname() == targetNick)
+		{
+			target = it->second;
+			break;
+		}
+	}
 
-    if (!target || !channel->hasClient(target))
-    {
-        std::string err = "441 " + client->getNickname() + " " + targetNick + " " + channelName + " :They aren't on that channel\r\n";
-        send(client->getFd(), err.c_str(), err.length(), 0);
-        return;
-    }
+	if (!target || !channel->hasClient(target))
+	{
+		std::string err = "441 " + client->getNickname() + " " + targetNick + " " + channelName + " :They aren't on that channel\r\n";
+		send(client->getFd(), err.c_str(), err.length(), 0);
+		return;
+	}
 
-    std::string reason = "Kicked";
-    if (tokens.size() >= 4)
-    {
-        reason = tokens[3];
-        for (size_t i = 4; i < tokens.size(); ++i)
-            reason += " " + tokens[i];
-        if (reason[0] == ':')
-            reason = reason.substr(1);
-    }
+	std::string reason = "Kicked";
+	if (tokens.size() >= 4)
+	{
+		reason = tokens[3];
+		for (size_t i = 4; i < tokens.size(); ++i)
+			reason += " " + tokens[i];
+		if (reason[0] == ':')
+			reason = reason.substr(1);
+	}
 
-    std::string kickMsg = getPrefix(client) + " KICK " + channelName + " " + targetNick + " :" + reason + "\r\n";
-    channel->broadcast(kickMsg);
-    channel->removeOperator(target);
-    channel->removeClient(target);
+	std::string kickMsg = getPrefix(client) + " KICK " + channelName + " " + targetNick + " :" + reason + "\r\n";
+	channel->broadcast(kickMsg);
+	channel->removeOperator(target);
+	channel->removeClient(target);
 
-    if (channel->getClients().empty())
-    {
-        delete channel;
-        g_channels.erase(channelName);
-    }
+	if (channel->getClients().empty())
+	{
+		delete channel;
+		g_channels.erase(channelName);
+	}
 }
 
 void Commands::handleNick(Client* client, const std::vector<std::string>& tokens)
@@ -652,7 +651,6 @@ void Commands::handleNick(Client* client, const std::vector<std::string>& tokens
 
 	std::string newNick = tokens[1];
 
-	// Aynı nick varsa
 	std::map<int, Client*>& clients = g_server->getClients();
 	for (std::map<int, Client*>::iterator it = clients.begin(); it != clients.end(); ++it)
 	{
@@ -664,10 +662,9 @@ void Commands::handleNick(Client* client, const std::vector<std::string>& tokens
 		}
 	}
 
-	// Güncellemeden önce prefix oluştur (eski nick ile)
 	std::string oldPrefix = getPrefix(client);
 
-	client->setNickname(newNick); // ✅ nick artık değişti
+	client->setNickname(newNick);
 
 	std::string nickMsg = oldPrefix + " NICK :" + newNick + "\r\n";
 	for (std::map<int, Client*>::iterator it = clients.begin(); it != clients.end(); ++it)
@@ -676,7 +673,7 @@ void Commands::handleNick(Client* client, const std::vector<std::string>& tokens
 
 	std::cout << "Nickname set to: " << newNick << std::endl;
 
-	tryRegister(client);  // 🔄 kayıt kontrolü en sona bırakılmalı
+	tryRegister(client);
 }
 
 void Commands::handleUser(Client* client, const std::vector<std::string>& tokens)
@@ -690,7 +687,7 @@ void Commands::handleUser(Client* client, const std::vector<std::string>& tokens
 	client->setUsername(tokens[1]);
 	client->setRealname(tokens[4]);
 	std::cout << "Username: " << tokens[1] << ", Realname: " << tokens[4] << std::endl;
-	tryRegister(client);  // <---
+	tryRegister(client);
 
 }
 
@@ -726,51 +723,50 @@ void Commands::tryRegister(Client* client)
 void Commands::cleanupChannels()
 {
 	for (std::map<std::string, Channel*>::iterator it = g_channels.begin(); it != g_channels.end(); ++it)
-		delete it->second; // Her channel nesnesini sil
-	g_channels.clear(); // Haritayı temizle
+		delete it->second;
+	g_channels.clear();
 }
 
 void Commands::handlePart(Client* client, const std::vector<std::string>& tokens)
 {
-    if (!client->isRegistered())
+	if (!client->isRegistered())
 	{
-        std::cout << "PART rejected: Client not registered." << std::endl;
-        return;
-    }
+		std::cout << "PART rejected: Client not registered." << std::endl;
+		return;
+	}
 
-    if (tokens.size() < 2)
+	if (tokens.size() < 2)
 	{
-        std::cout << "PART: Missing channel name." << std::endl;
-        return;
-    }
+		std::cout << "PART: Missing channel name." << std::endl;
+		return;
+	}
 
-    std::string channelName = tokens[1];
-    if (g_channels.find(channelName) == g_channels.end())
+	std::string channelName = tokens[1];
+	if (g_channels.find(channelName) == g_channels.end())
 	{
-        std::cout << "PART: Channel does not exist." << std::endl;
-        return;
-    }
+		std::cout << "PART: Channel does not exist." << std::endl;
+		return;
+	}
 
-    Channel* channel = g_channels[channelName];
-    if (!channel->hasClient(client))
+	Channel* channel = g_channels[channelName];
+	if (!channel->hasClient(client))
 	{
-        std::cout << "PART: You are not in channel " << channelName << std::endl;
-        return;
-    }
+		std::cout << "PART: You are not in channel " << channelName << std::endl;
+		return;
+	}
 
-    std::string message = getPrefix(client) + " PART " + channelName + "\r\n";
-    channel->broadcast(message);
+	std::string message = getPrefix(client) + " PART " + channelName + "\r\n";
+	channel->broadcast(message);
 
-    channel->removeClient(client);
-    std::cout << "User " << client->getNickname() << " left channel " << channelName << std::endl;
+	channel->removeClient(client);
+	std::cout << "User " << client->getNickname() << " left channel " << channelName << std::endl;
 
-    // Kanal boş kaldıysa bellekten sil
-    if (!channel->hasClient(client))
+	if (!channel->hasClient(client))
 	{
-        delete channel;
-        g_channels.erase(channelName);
-        std::cout << "Deleted empty channel: " << channelName << std::endl;
-    }
+		delete channel;
+		g_channels.erase(channelName);
+		std::cout << "Deleted empty channel: " << channelName << std::endl;
+	}
 }
 
 std::string getPrefix(Client* client)
@@ -790,7 +786,6 @@ void Commands::handleMode(Client* client, const std::vector<std::string>& tokens
 	const std::string& target = tokens[1];
 	const std::string& mode = tokens[2];
 
-	// Kullanıcı modu (örnek: MODE fekiz +i)
 	
 	if (target[0] != '#')
 	{
@@ -801,7 +796,6 @@ void Commands::handleMode(Client* client, const std::vector<std::string>& tokens
 			return;
 		}
 
-		// Kullanıcı modlarını uygula
 		if (mode[0] == '+')
 			for (size_t i = 1; i < mode.length(); ++i)
 				client->addUserMode(mode[i]);
@@ -809,22 +803,18 @@ void Commands::handleMode(Client* client, const std::vector<std::string>& tokens
 			for (size_t i = 1; i < mode.length(); ++i)
 				client->removeUserMode(mode[i]);
 
-		// Mod yanıtı hazırla
 		std::string modeStr = "";
 		if (client->hasUserMode('i'))
 			modeStr += "i";
 
-		// :irc.localhost 221 nick +i
 		std::string reply = ":irc.localhost 221 " + client->getNickname() + " +" + modeStr + "\r\n";
 		send(client->getFd(), reply.c_str(), reply.length(), 0);
 
-		// Ayrıca istemciye MOD değişikliğini bildir
 		std::string broadcast = getPrefix(client) + " MODE " + client->getNickname() + " +" + modeStr + "\r\n";
 		send(client->getFd(), broadcast.c_str(), broadcast.length(), 0);
 		return;
 	}
 
-	// Kanal modu (örnek: MODE #kanal +o nick)
 	if (g_channels.find(target) == g_channels.end())
 	{
 		std::string err = "403 " + client->getNickname() + " " + target + " :No such channel\r\n";
@@ -841,7 +831,6 @@ void Commands::handleMode(Client* client, const std::vector<std::string>& tokens
 		return ;
 	}
 
-	// +o / -o işlemi
 	if ((mode == "+o" || mode == "-o") && tokens.size() >= 4)
 	{
 		const std::string& nick = tokens[3];
@@ -965,7 +954,6 @@ void Commands::handleTopic(Client* client, const std::vector<std::string>& token
 
 	Channel* channel = it->second;
 
-	// Başlık gösterme
 	if (tokens.size() == 2)
 	{
 		if (channel->hasTopic())
@@ -981,7 +969,6 @@ void Commands::handleTopic(Client* client, const std::vector<std::string>& token
 		return;
 	}
 
-	// Başlık değiştirme
 	if (channel->isTopicRestricted() && !channel->isOperator(client))
 	{
 		std::string err = "482 " + client->getNickname() + " " + channelName + " :You're not channel operator\r\n";

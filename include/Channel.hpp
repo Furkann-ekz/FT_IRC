@@ -11,6 +11,7 @@ class Channel
 {
 	public:
 		Channel(const std::string &name);
+		~Channel();
 		void setTopic(const std::string& topic);
 		const std::string& getTopic() const;
 		bool hasTopic() const;
