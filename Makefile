@@ -1,23 +1,26 @@
 NAME = ircserv
 
-FLAGS = -Wall -Wextra -Werror -std=c++98
+CXX = c++
+CXXFLAGS = -Wall -Wextra -Werror -std=c++98
 
-SRCS = src/main.cpp src/Server.cpp src/Client.cpp src/Channel.cpp src/Commands.cpp
-OBJS = $(SRC:.cpp=.o)
+SRC = src/main.cpp src/Server.cpp src/Client.cpp src/Channel.cpp src/Commands.cpp
+OBJ = $(SRC:.cpp=.o)
+INC = -Iinclude
 
 all: $(NAME)
 
-$(NAME): $(SRCS) $(OBJS)
-	c++ $(CFLAGS) $(SRCS) -o $(NAME)
+$(NAME): $(OBJ)
+	$(CXX) $(CXXFLAGS) $(INC) -o $(NAME) $(OBJ)
+	rm -rf $(OBJ)
 
 clean:
-	rm -f $(OBJS)
+	rm -f valgrind.log
+	rm -f $(OBJ)
 
 fclean: clean
 	rm -f $(NAME)
+	rm -f valgrind.log
 
 re: fclean all
 
 .PHONY: all clean fclean re
-
-# valgrind --leak-check=full --show-leak-kinds=all --track-origins=yes --log-file=valgrind.log ./ircserv 6667 mypass
