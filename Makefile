@@ -24,3 +24,4 @@ fclean: clean
 re: fclean all
 
 .PHONY: all clean fclean re
+#valgrind --leak-check=full --show-leak-kinds=all --track-origins=yes --log-file=valgrind.log ./ircserv 8080 mypass
